@@ -47,14 +47,23 @@ class PandasPart(IFeedPart):
             str: A string containing the DataFrame's standard string representation.
         """
         return repr(self._df)
+    
+    def __len__(self) -> int:
+        """
+        Retrieves the total number of part data.
 
-    def __getitem__(self, index: Union[int, slice]) -> Union[pd.Series, 'PandasPart']:
+        Returns:
+            int: The total number of part data.
+        """
+        return len(self._df)
+
+    def __getitem__(self, index: Union[int, slice, str]) -> Union[pd.Series, 'PandasPart']:
         """
         Allows for both integer and slice indexing on the DataFrame, with support for backward indexing.
         
         Args:
-            index (Union[int, slice]): Can be an integer (for single-row access) or a slice object 
-                                       (for range access).
+            index (Union[int, slice, str]): Can be an integer (for single-row access) or a slice object 
+                                            (for range access) or a string (for column series)
 
         Returns:
             Union[pd.Series, PandasPart]: 
@@ -88,6 +97,8 @@ class PandasPart(IFeedPart):
             # Create a new PandasPart instance with the sliced DataFrame
             sliced_df: pd.DataFrame = self._df.iloc[positions].reset_index(drop=True)
             return PandasPart(sliced_df, self._backword)
+        elif isinstance(index, str):
+            return self._df[index]
         else:
             raise TypeError(f"Invalid argument type: {type(index)}")
 

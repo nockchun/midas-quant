@@ -36,7 +36,10 @@ class PandasFeeder(IFeeder, Generic[T]):
         dfs: List[pd.DataFrame], 
         window: int = 5, 
         backword: bool = True, 
-        part_class: Type[T] = IFeedPart
+        part_class: Type[T] = IFeedPart,
+        col_daytime: str = "reg_day",
+        col_price: str = "price",
+        infos: List[dict] = None
     ) -> None:
         """
         Initializes the PandasFeeder with a list of DataFrames, window size, indexing direction,
@@ -48,11 +51,17 @@ class PandasFeeder(IFeeder, Generic[T]):
             backword (bool, optional): If True, indexes backward; otherwise, indexes forward. Defaults to True.
             part_class (Type[T], optional): The class used to create parts from DataFrame segments.
                                              Must be a subclass of IFeedPart. Defaults to IFeedPart.
+            col_daytime (str): The column name of date or time.
+            col_price (str): The column name of price.
+            infos dict: extra information for each df
         """
         self._dfs: List[pd.DataFrame] = dfs
         self._window: int = window
         self._backword: bool = backword
         self._part_class: Type[T] = part_class
+        self._col_daytime: str = col_daytime
+        self._col_price: str = col_price
+        self._infos: List[dict] = infos
         
         self._dfs_index: int = 0
         self._dfs_size: int = len(dfs)
@@ -65,6 +74,48 @@ class PandasFeeder(IFeeder, Generic[T]):
         for df in dfs:
             self._size_item += max(len(df) - window + 1, 0)
 
+    def col_daytime(self):
+        """
+        Get the column name of date or time.
+
+        Returns:
+            str: The column name of date or time.
+        """
+        return self._col_daytime
+
+    def col_price(self):
+        """
+        Get the column name of price.
+
+        Returns:
+            str: The column name of price.
+        """
+        return self._col_price
+
+    def infos(self) -> List[dict]:
+        """
+        Retrieves the list of all infos managed by the feeder.
+
+        Returns:
+            List[dict]: The list of infos.
+        """
+        if self._infos is not None:
+            return self._infos
+        else:
+            return None
+
+    def info(self) -> dict:
+        """
+        The current info of all info list.
+
+        Returns:
+            dict: The current info.
+        """
+        if (self._infos is not None) and (len(self._infos) == len(self._dfs)):
+            return self._infos[self._dfs_index]
+        else:
+            return None
+
     def datas(self) -> List[pd.DataFrame]:
         """
         Retrieves the list of all DataFrames managed by the feeder.
@@ -73,6 +124,33 @@ class PandasFeeder(IFeeder, Generic[T]):
             List[pd.DataFrame]: The list of DataFrames.
         """
         return self._dfs
+    
+    def data(self) -> pd.DataFrame:
+        """
+        The current DataFrame of all DataFrames list.
+
+        Returns:
+            pd.DataFrame: The current DataFrames.
+        """
+        return self._dfs[self._dfs_index]
+    
+    def shape(self) -> Tuple[int, int]:
+        """
+        The shape of DataFrame.
+
+        Returns:
+            Tuple[int, int]: shape of DataFrame. (row_size, column_size)
+        """
+        return self.data().shape
+    
+    def partShape(self) -> Tuple[int, int]:
+        """
+        The shape of feed part.
+
+        Returns:
+            Tuple[int, int]: shape of feed part. (window_size, column_size)
+        """
+        return (self._window, self.data().shape[1])
 
     def __iter__(self) -> 'PandasFeeder[T]':
         """

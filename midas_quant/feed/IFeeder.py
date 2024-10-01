@@ -14,12 +14,82 @@ class IFeeder(ABC):
     """
 
     @abstractmethod
+    def col_daytime(self):
+        """
+        Get the column name of date or time.
+
+        Returns:
+            str: The column name of date or time.
+        """
+        pass
+
+    @abstractmethod
+    def col_price(self):
+        """
+        Get the column name of price.
+
+        Returns:
+            str: The column name of price.
+        """
+        pass
+
+    @abstractmethod
+    def infos(self) -> List[dict]:
+        """
+        Retrieves the list of all infos managed by the feeder.
+
+        Returns:
+            List[dict]: The list of infos.
+        """
+        pass
+
+    @abstractmethod
+    def info(self) -> dict:
+        """
+        The current info of all info list.
+
+        Returns:
+            dict: The current info.
+        """
+        pass
+
+    @abstractmethod
     def datas(self) -> List[pd.DataFrame]:
         """
         Retrieves the list of all Pandas DataFrames managed by the feeder.
 
         Returns:
             List[pd.DataFrame]: The list of DataFrames.
+        """
+        pass
+
+    @abstractmethod
+    def data(self) -> pd.DataFrame:
+        """
+        The current DataFrame of all DataFrames list.
+
+        Returns:
+            pd.DataFrame: The current DataFrames.
+        """
+        pass
+    
+    @abstractmethod
+    def shape(self) -> Tuple[int, int]:
+        """
+        The shape of DataFrame.
+
+        Returns:
+            Tuple[int, int]: shape of DataFrame. (row_size, column_size)
+        """
+        pass
+
+    @abstractmethod
+    def partShape(self) -> Tuple[int, int]:
+        """
+        The shape of feed part.
+
+        Returns:
+            Tuple[int, int]: shape of feed part. (window_size, column_size)
         """
         pass
 

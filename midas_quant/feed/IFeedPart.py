@@ -11,7 +11,37 @@ class IFeedPart(ABC):
     """
 
     @abstractmethod
-    def __getitem__(self, index: Union[int, slice]) -> Union[pd.Series, pd.DataFrame]:
+    def _repr_html_(self) -> str:
+        """
+        Returns the HTML representation of the DataFrame, used for displaying in Jupyter Notebooks.
+        
+        Returns:
+            str: A string containing the HTML representation of the DataFrame.
+        """
+        pass
+
+    @abstractmethod
+    def __repr__(self) -> str:
+        """
+        Returns the string representation of the DataFrame for displaying in the console.
+        
+        Returns:
+            str: A string containing the DataFrame's standard string representation.
+        """
+        pass
+    
+    @abstractmethod
+    def __len__(self) -> int:
+        """
+        Retrieves the total number of part data.
+
+        Returns:
+            int: The total number of part data.
+        """
+        pass
+    
+    @abstractmethod
+    def __getitem__(self, index: Union[int, slice, str]) -> Union[pd.Series, pd.DataFrame]:
         """
         Allows for both integer and slice indexing on the data.
 
