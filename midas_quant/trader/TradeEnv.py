@@ -75,6 +75,15 @@ class TradeEnv(gym.Env, ABC):
             shape=self._feeder.partShape(), 
             dtype=np.float32
         )
+    
+    def account(self):
+        """
+        Get the current account manager.
+
+        Returns:
+            account manager.
+        """
+        return self._account
 
     def history(self):
         """

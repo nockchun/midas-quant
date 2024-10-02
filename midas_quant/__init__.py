@@ -3,7 +3,7 @@ from .trader import *
 import gymnasium as gym
 
 
-__version__ = '0.1.11'
+__version__ = '0.1.12'
 
 
 gym.register(
