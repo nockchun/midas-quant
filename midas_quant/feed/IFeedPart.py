@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, List
 import pandas as pd
 
 class IFeedPart(ABC):
@@ -9,6 +9,15 @@ class IFeedPart(ABC):
 
     Any subclass inheriting from FeedPart must implement all abstract methods to ensure consistent behavior.
     """
+    
+    def isBackword(self) -> bool:
+        """
+        Checks if the indexing is set to backward.
+
+        Returns:
+            bool: True if indexing is backward, False otherwise.
+        """
+        pass
 
     @abstractmethod
     def _repr_html_(self) -> str:

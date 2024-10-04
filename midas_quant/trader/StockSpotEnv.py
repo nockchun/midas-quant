@@ -99,6 +99,6 @@ class StockSpotEnv(TradeEnv):
         
         # Compute the reward as the relative change in account value
         # (New account value - Previous account value) / Previous account value
-        reward = (account - account_prev) / account_prev
+        reward = (account - account_prev) / account_prev * 100
         
         return reward

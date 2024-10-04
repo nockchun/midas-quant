@@ -2,113 +2,124 @@ import gymnasium as gym
 import numpy as np
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable, Optional, Dict, Any
-
+from typing import Callable, Optional, Dict, Any, Tuple
+from ..feed import IFeeder
 
 class TradeEnv(gym.Env, ABC):
     """
-    A custom OpenAI Gym environment for simulating trading actions within a spot market.
+    Custom OpenAI Gym environment for simulating spot market trading.
 
-    This environment facilitates the simulation of trading strategies by managing 
-    an account's balance, executing buy/sell actions, and tracking the history of 
-    assets and trades. It interfaces with a data feeder to receive market data and 
-    utilizes an account management system to handle transactions and account state.
+    This environment simulates trading strategies by interacting with market data, managing 
+    an account's balance, and executing buy/sell actions. It uses a data feeder for market data 
+    and an account management system for handling transactions.
 
     Attributes:
-        _feeder (object): An instance that provides market data and manages the data feed.
-        _account (Callable): A callable that initializes and manages the trading account.
-        _action (Enum): An enumeration of possible trading actions (e.g., BUY, SELL, HOLD).
-        _balance (int): The initial cash balance available for trading.
-        _buy_quantity (int): The default quantity of assets to buy per transaction.
-        _fee (float): The transaction fee percentage applied to each trade.
-        _tax (float): The transaction tax percentage applied to each sale.
-        action_space (gym.spaces.Discrete): The space of possible actions defined by the Action enum.
-        observation_space (gym.spaces.Box): The space representing the shape and type of observations.
+        _feeder (IFeeder): Feeder for providing market data.
+        _account_class (Callable): Callable for managing the trading account.
+        _account (Optional[object]): Current trading account instance.
+        _action (Enum): Enumeration of possible trading actions (e.g., BUY, SELL, HOLD).
+        _balance (int): Initial balance for trading.
+        _buy_quantity (int): Number of assets bought per transaction.
+        _fee (float): Transaction fee as a percentage.
+        _tax (float): Tax on sales as a percentage.
+        _is_terminated (bool): Whether the episode has terminated.
+        _is_truncated (bool): Whether the episode has been truncated.
+        action_space (gym.spaces.Discrete): Action space for trading actions.
+        observation_space (gym.spaces.Box): Observation space for market data.
     """
 
     def __init__(
         self, 
-        feeder: object, 
-        account: Callable = None, 
-        action: Enum = None, 
-        balance: int = 1_000_000, 
-        buy_quantity: int = 10, 
-        fee: float = 0.3, 
+        feeder: IFeeder,
+        account: Callable = None,
+        action: Enum = None,
+        balance: int = 1_000_000,
+        buy_quantity: int = 10,
+        fee: float = 0.3,
         tax: float = 0.38
-    ):
+    ) -> None:
         """
-        Initializes the TradeEnv environment with the specified parameters.
+        Initializes the trading environment.
 
         Args:
-            feeder (object): An instance that provides market data and manages the data feed.
-            account (Callable, optional): A callable that initializes and manages the trading account. 
-                Defaults to None.
-            action (Enum, optional): An enumeration of possible trading actions (e.g., BUY, SELL, HOLD). 
-                Defaults to None.
-            balance (int, optional): The initial cash balance available for trading. 
-                Defaults to 1,000,000.
-            buy_quantity (int, optional): The default quantity of assets to buy per transaction. 
-                Defaults to 10.
-            fee (float, optional): The transaction fee percentage applied to each trade. 
-                Defaults to 0.3.
-            tax (float, optional): The transaction tax percentage applied to each sale. 
-                Defaults to 0.38.
+            feeder (IFeeder): Data feeder for market data.
+            account (Callable, optional): Callable to manage the trading account. Defaults to None.
+            action (Enum, optional): Enum for possible trading actions. Defaults to None.
+            balance (int, optional): Starting balance for trading. Defaults to 1,000,000.
+            buy_quantity (int, optional): Number of assets to buy per trade. Defaults to 10.
+            fee (float, optional): Transaction fee as a percentage. Defaults to 0.3.
+            tax (float, optional): Tax on sales as a percentage. Defaults to 0.38.
         """
-        super(TradeEnv, self).__init__()
-        
+        super().__init__()
+
+        feeder.reset()
         self._feeder = feeder
         self._account_class = account
         self._account = None
+        self._accounts = []
         self._action = action
         self._balance = balance
         self._buy_quantity = buy_quantity
         self._fee = fee
         self._tax = tax
+        self._is_terminated = False
+        self._is_truncated = False
         
-        # Define the action space based on the number of possible actions
         self.action_space = gym.spaces.Discrete(len(action))
-        
-        # Define the observation space with appropriate shape and data type
         self.observation_space = gym.spaces.Box(
-            low=-np.inf, 
-            high=np.inf, 
-            shape=self._feeder.partShape(), 
-            dtype=np.float32
+            low=-np.inf, high=np.inf, shape=self._feeder.partShape(), dtype=np.float32
         )
-    
-    def account(self):
+
+    def getFeeder(self) -> IFeeder:
         """
-        Get the current account manager.
+        Returns the data feeder.
 
         Returns:
-            account manager.
+            IFeeder: The data feeder.
+        """
+        return self._feeder
+    
+    def getAccount(self) -> Optional[object]:
+        """
+        Returns the current trading account.
+
+        Returns:
+            Optional[object]: Current trading account, or None if not initialized.
         """
         return self._account
-
-    def history(self):
+    
+    def getAccounts(self) -> list:
         """
-        Retrieves the historical records of account assets and trades.
+        Returns the list of all past accounts.
 
         Returns:
-            tuple: A tuple containing two DataFrames:
-                - asset: The asset history DataFrame.
-                - trade: The trade history DataFrame.
+            list: List of past account states.
+        """
+        return self._accounts
+    
+    def getHistory(self) -> Tuple[Any, Any]:
+        """
+        Returns the history of assets and trades.
+
+        Returns:
+            Tuple[Any, Any]: Asset and trade history as DataFrames.
         """
         return self._account.getHistory()
     
-    def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
+    def reset(
+        self, 
+        seed: Optional[int] = None, 
+        options: Optional[Dict[str, Any]] = None
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
-        Resets the environment to an initial state and returns the initial observation.
+        Resets the environment to the initial state.
 
-        This method resets the data feeder, initializes a new trading account with 
-        default parameters, retrieves the first set of market data, and records 
-        the initial state of the account.
+        Args:
+            seed (Optional[int], optional): Random seed. Defaults to None.
+            options (Optional[Dict[str, Any]], optional): Reset options. Defaults to None.
 
         Returns:
-            tuple: A tuple containing the initial observations and additional info:
-                - obs (np.ndarray): The initial observation array.
-                - extra_info (dict): A dictionary containing extra information such as 
-                  feed changes, asset history, and trade history.
+            Tuple[np.ndarray, Dict[str, Any]]: Initial observation and additional info.
         """
         super().reset(seed=seed)
 
@@ -118,12 +129,11 @@ class TradeEnv(gym.Env, ABC):
         self._feeder.reset()
         feed_info = self._feeder.info()
         self._account = self._account_class(
-            feed_info["code"],
-            feed_info["name"],
-            balance=self._balance,
-            fee=self._fee,
-            tax=self._tax
+            feed_info["code"], feed_info["name"], balance=self._balance, fee=self._fee, tax=self._tax
         )
+        self._is_terminated = False
+        self._is_truncated = False
+        self._accounts = []
         
         self._obs, self._feed_change = self._feeder.next()
         self._account.hold(
@@ -132,23 +142,17 @@ class TradeEnv(gym.Env, ABC):
         )
         return self._obs, self._extra_infos(self._obs)
     
-    def _extra_infos(self, obs):
+    def _extra_infos(self, obs: np.ndarray) -> Dict[str, Any]:
         """
-        Generates additional information about the current state of the environment.
-
-        This includes checking if trading is possible based on the current balance and 
-        asset quantity, and packaging asset and trade histories.
+        Returns additional information about the current state.
 
         Args:
-            obs (np.ndarray): The current observation array.
+            obs (np.ndarray): Current observation.
 
         Returns:
-            dict: A dictionary containing:
-                - "feed_change" (object): Information about changes in the data feed.
-                - "asset" (object or None): The latest asset history record, if available.
-                - "trade" (object or None): The latest trade history record, if available.
+            Dict[str, Any]: Additional info including asset and trade history.
         """
-        hist_asset, hist_trade = self.history()
+        hist_asset, hist_trade = self.getHistory()
         self._cant_trade = False
         if (
             hist_asset[0].balance < obs[0][self._feeder.col_price()] 
@@ -161,118 +165,125 @@ class TradeEnv(gym.Env, ABC):
             "trade": hist_trade[0] if len(hist_trade) > 0 else None,
         }
     
-    def _terminated(self, obs, feed_change):
+    def _terminated(self, obs: Optional[np.ndarray], feed_change: Optional[object]) -> bool:
         """
-        Determines whether the episode has terminated.
-
-        The episode is considered terminated if both the observation and feed change 
-        are None.
+        Checks if the episode is terminated.
 
         Args:
-            obs (np.ndarray or None): The current observation array.
-            feed_change (object or None): Information about changes in the data feed.
+            obs (Optional[np.ndarray]): Current observation.
+            feed_change (Optional[object]): Data feed change.
 
         Returns:
-            bool: True if the episode is terminated, False otherwise.
+            bool: True if terminated, False otherwise.
         """
-        if obs is None and feed_change is None:
-            return True
-
-        return False
+        return obs is None and feed_change is None
     
-    def _truncated(self, obs, feed_change):
+    def _truncated(self, obs: Optional[np.ndarray], feed_change: Optional[object]) -> bool:
         """
-        Determines whether the episode has been truncated.
-
-        The episode is considered truncated if trading is not possible based on 
-        the current account balance and asset quantity.
+        Checks if the episode is truncated.
 
         Args:
-            obs (np.ndarray or None): The current observation array.
-            feed_change (object or None): Information about changes in the data feed.
+            obs (Optional[np.ndarray]): Current observation.
+            feed_change (Optional[object]): Data feed change.
 
         Returns:
-            bool: True if the episode is truncated, False otherwise.
+            bool: True if truncated, False otherwise.
         """
         return self._cant_trade
-
+    
     @abstractmethod
-    def _act(self, action, rate, obs, feed_change):
+    def _act(
+        self, 
+        action: int, 
+        rate: float, 
+        obs: np.ndarray, 
+        feed_change: object
+    ) -> None:
         """
-        Executes the specified action within the environment.
-
-        This abstract method must be implemented by subclasses to define how 
-        actions affect the environment's state.
+        Executes the specified action.
 
         Args:
-            action (int): The action to be taken, corresponding to the action space.
-            rate (float): An additional parameter that may influence the action.
-            obs (np.ndarray): The current observation array.
-            feed_change (object): Information about changes in the data feed.
+            action (int): Action to perform.
+            rate (float): Rate that may influence the action.
+            obs (np.ndarray): Current observation.
+            feed_change (object): Data feed change.
 
         Raises:
-            NotImplementedError: If the method is not implemented in the subclass.
+            NotImplementedError: If not implemented in subclass.
         """
         pass
     
     @abstractmethod
-    def _reward(self, action, rate, obs, feed_change, asset, trade):
+    def _reward(
+        self, 
+        action: int, 
+        rate: float, 
+        obs: np.ndarray, 
+        feed_change: object, 
+        asset: Optional[object], 
+        trade: Optional[object]
+    ) -> float:
         """
-        Calculates the reward for the given action and state.
-
-        This abstract method must be implemented by subclasses to define how 
-        rewards are calculated based on actions and state transitions.
+        Calculates the reward for the action taken.
 
         Args:
-            action (int): The action taken.
-            rate (float): An additional parameter that may influence the reward.
-            obs (np.ndarray): The current observation array after the action.
-            feed_change (object): Information about changes in the data feed after the action.
-            asset (object or None): The latest asset history record.
-            trade (object or None): The latest trade history record.
+            action (int): Action taken.
+            rate (float): Rate that may influence the reward.
+            obs (np.ndarray): Current observation after action.
+            feed_change (object): Data feed change after action.
+            asset (Optional[object]): Latest asset history.
+            trade (Optional[object]): Latest trade history.
 
         Returns:
-            float: The calculated reward for the action and state.
+            float: The calculated reward.
         """
-        return 0
+        return 0.0
     
-    def step(self, action, rate=0):
+    def step(self, action: int, rate: float = 0.0) -> Tuple[np.ndarray, float, bool, bool, Optional[Dict[str, Any]]]:
         """
-        Executes one time step within the environment based on the given action.
-
-        This method processes the action, updates the environment's state, 
-        calculates the reward, and determines if the episode has terminated 
-        or been truncated.
+        Executes one step in the environment.
 
         Args:
-            action (int): The action to take, corresponding to the action space.
-            rate (float, optional): An additional parameter that may influence the action. 
-                Defaults to 0.
+            action (int): Action to take.
+            rate (float, optional): Rate influencing the action. Defaults to 0.0.
 
         Returns:
-            tuple: A tuple containing:
-                - obs (np.ndarray): The next observation array.
-                - reward (float): The reward obtained from taking the action.
-                - terminated (bool): Whether the episode has terminated.
-                - truncated (bool): Whether the episode has been truncated.
-                - extra_info (dict): Additional information about the environment's state.
+            Tuple[np.ndarray, float, bool, bool, Optional[Dict[str, Any]]]: 
+                - Observation after step
+                - Reward
+                - Termination flag
+                - Truncation flag
+                - Additional info
         """
-        terminated = self._terminated(self._obs, self._feed_change)
-        truncated = self._truncated(self._obs, self._feed_change)
-
-        # Execute the action
-        act = self._act(action, rate, self._obs, self._feed_change)
+        if self._is_terminated:
+            return self._obs, 0.0, self._is_terminated, self._is_truncated, None
         
-        # Get the next set of observations from the feeder
+        self._act(action, rate, self._obs, self._feed_change)
         self._obs, self._feed_change = self._feeder.next()
+
+        self._is_terminated = self._terminated(self._obs, self._feed_change)
+        truncated = self._truncated(self._obs, self._feed_change)
+        if self._is_terminated or truncated:
+            return self._obs, 0.0, self._is_terminated, self._is_truncated, None
         
-        # Gather additional information
         extra_info = self._extra_infos(self._obs)
+        if extra_info["feed_change"]:
+            self._accounts.append(self._account)
+            feed_info = self._feeder.info()
+            self._account = self._account_class(
+                feed_info["code"], feed_info["name"], balance=self._balance, fee=self._fee, tax=self._tax
+            )
+            self._obs, self._feed_change = self._feeder.next()
+            self._account.hold(
+                self._obs[0][self._feeder.col_daytime()],
+                self._obs[0][self._feeder.col_price()]
+            )
+
+            return self._obs, 0.0, self._is_terminated, True, None
         
-        # Calculate the reward based on the action and new state
         reward = self._reward(
             action, rate, self._obs, self._feed_change, 
             extra_info["asset"], extra_info["trade"]
         )
 
-        return self._obs, reward, terminated, truncated, extra_info
+        return self._obs, reward, self._is_terminated, truncated, extra_info

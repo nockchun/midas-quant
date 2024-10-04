@@ -8,26 +8,26 @@ T = TypeVar('T', bound=IFeedPart)
 
 class PandasFeeder(IFeeder, Generic[T]):
     """
-    A feeder class that iterates over a list of Pandas DataFrames, providing windowed 
-    segments of each DataFrame as specified by the window size. It supports both 
-    backward and forward indexing and utilizes a specified part class (defaulting to 
-    IFeedPart) to handle each windowed segment.
+    Feeder class that iterates over a list of Pandas DataFrames, providing windowed segments 
+    of each DataFrame as defined by the window size. Supports both backward and forward indexing, 
+    utilizing a specified part class (default: IFeedPart) to manage each windowed segment.
 
-    This class implements the IFeeder interface, ensuring it adheres to the required 
-    methods and behaviors defined by the interface.
+    Implements the IFeeder interface, adhering to required methods and behaviors.
 
     Attributes:
-        _dfs (List[pd.DataFrame]): A list of Pandas DataFrames to be fed.
-        _window (int): The size of the window (number of rows) for each segment.
-        _backword (bool): Determines the direction of indexing. True for backward, False for forward.
-        _part_class (Type[T]): The class used to create parts from DataFrame segments.
+        _dfs (List[pd.DataFrame]): List of DataFrames to iterate over.
+        _window (int): Number of rows per windowed segment.
+        _backword (bool): Determines direction of indexing (True for backward, False for forward).
+        _part_class (Type[T]): Class used to manage each windowed DataFrame segment.
+        _col_daytime (str): Name of the column representing date or time.
+        _col_price (str): Name of the column representing price.
+        _infos (List[dict]): Additional information for each DataFrame.
 
         _dfs_index (int): Current index in the list of DataFrames.
         _dfs_size (int): Total number of DataFrames.
         _df (pd.DataFrame): The current DataFrame being processed.
-        _df_index (int): Current row index within the current DataFrame.
+        _df_index (int): Current row index within the DataFrame.
         _df_size (int): Total number of rows in the current DataFrame.
-
         _size_item (int): Total number of windowed segments across all DataFrames.
     """
 
@@ -43,17 +43,16 @@ class PandasFeeder(IFeeder, Generic[T]):
     ) -> None:
         """
         Initializes the PandasFeeder with a list of DataFrames, window size, indexing direction,
-        and the part class used for creating segments.
+        and the part class for handling segments.
 
         Args:
-            dfs (List[pd.DataFrame]): The list of Pandas DataFrames to be fed.
-            window (int, optional): The number of rows in each windowed segment. Defaults to 5.
-            backword (bool, optional): If True, indexes backward; otherwise, indexes forward. Defaults to True.
-            part_class (Type[T], optional): The class used to create parts from DataFrame segments.
-                                             Must be a subclass of IFeedPart. Defaults to IFeedPart.
-            col_daytime (str): The column name of date or time.
-            col_price (str): The column name of price.
-            infos dict: extra information for each df
+            dfs (List[pd.DataFrame]): List of DataFrames to be processed.
+            window (int, optional): Size of each window (number of rows). Defaults to 5.
+            backword (bool, optional): Direction of indexing (True for backward, False for forward). Defaults to True.
+            part_class (Type[T], optional): Class used to handle each windowed segment. Defaults to IFeedPart.
+            col_daytime (str): Column representing date or time.
+            col_price (str): Column representing price.
+            infos (List[dict], optional): Extra information for each DataFrame.
         """
         self._dfs: List[pd.DataFrame] = dfs
         self._window: int = window
@@ -68,53 +67,47 @@ class PandasFeeder(IFeeder, Generic[T]):
         self._df: pd.DataFrame = dfs[self._dfs_index] if self._dfs_size > 0 else pd.DataFrame()
         self._df_index: int = window
         self._df_size: int = len(self._df)
-        
-        # Calculate total number of windowed segments across all DataFrames
-        self._size_item: int = 0
-        for df in dfs:
-            self._size_item += max(len(df) - window + 1, 0)
 
-    def col_daytime(self):
+        # Calculate total number of windowed segments across all DataFrames
+        self._size_item: int = sum(max(len(df) - window + 1, 0) for df in dfs)
+
+    def col_daytime(self) -> str:
         """
-        Get the column name of date or time.
+        Retrieves the name of the column representing date or time.
 
         Returns:
-            str: The column name of date or time.
+            str: The column name.
         """
         return self._col_daytime
 
-    def col_price(self):
+    def col_price(self) -> str:
         """
-        Get the column name of price.
+        Retrieves the name of the column representing price.
 
         Returns:
-            str: The column name of price.
+            str: The column name.
         """
         return self._col_price
 
-    def infos(self) -> List[dict]:
+    def infos(self) -> Optional[List[dict]]:
         """
-        Retrieves the list of all infos managed by the feeder.
+        Returns the list of extra information dictionaries, if available.
 
         Returns:
-            List[dict]: The list of infos.
+            Optional[List[dict]]: List of info dictionaries or None if not provided.
         """
-        if self._infos is not None:
-            return self._infos
-        else:
-            return None
+        return self._infos
 
-    def info(self) -> dict:
+    def info(self) -> Optional[dict]:
         """
-        The current info of all info list.
+        Returns the current info dictionary for the active DataFrame, if available.
 
         Returns:
-            dict: The current info.
+            Optional[dict]: The current info dictionary or None if not applicable.
         """
-        if (self._infos is not None) and (len(self._infos) == len(self._dfs)):
+        if self._infos and len(self._infos) == len(self._dfs):
             return self._infos[self._dfs_index]
-        else:
-            return None
+        return None
 
     def datas(self) -> List[pd.DataFrame]:
         """
@@ -124,31 +117,31 @@ class PandasFeeder(IFeeder, Generic[T]):
             List[pd.DataFrame]: The list of DataFrames.
         """
         return self._dfs
-    
+
     def data(self) -> pd.DataFrame:
         """
-        The current DataFrame of all DataFrames list.
+        Retrieves the current active DataFrame.
 
         Returns:
-            pd.DataFrame: The current DataFrames.
+            pd.DataFrame: The current DataFrame.
         """
         return self._dfs[self._dfs_index]
-    
+
     def shape(self) -> Tuple[int, int]:
         """
-        The shape of DataFrame.
+        Returns the shape of the current DataFrame (rows, columns).
 
         Returns:
-            Tuple[int, int]: shape of DataFrame. (row_size, column_size)
+            Tuple[int, int]: The shape of the current DataFrame.
         """
         return self.data().shape
-    
+
     def partShape(self) -> Tuple[int, int]:
         """
-        The shape of feed part.
+        Returns the shape of the current windowed segment (rows, columns).
 
         Returns:
-            Tuple[int, int]: shape of feed part. (window_size, column_size)
+            Tuple[int, int]: The shape of the windowed segment.
         """
         return (self._window, self.data().shape[1])
 
@@ -157,10 +150,9 @@ class PandasFeeder(IFeeder, Generic[T]):
         Resets the feeder to the initial state and returns the iterator object.
 
         Returns:
-            PandasFeeder[T]: The iterator object itself.
+            PandasFeeder[T]: The iterator object.
         """
         self._dfs_index = 0
-        self._dfs_size = len(self._dfs)
         self._df = self._dfs[self._dfs_index] if self._dfs_size > 0 else pd.DataFrame()
         self._df_index = self._window
         self._df_size = len(self._df)
@@ -177,59 +169,50 @@ class PandasFeeder(IFeeder, Generic[T]):
 
     def __next__(self) -> Tuple[T, bool]:
         """
-        Retrieves the next windowed segment and indicates if a DataFrame change has occurred.
+        Retrieves the next windowed segment and whether a DataFrame change occurred.
 
         Returns:
             Tuple[T, bool]: 
-                - T: An instance of the part_class containing the windowed DataFrame segment.
-                - bool: True if the feeder has moved to a new DataFrame, False otherwise.
+                - T: Instance of the part_class containing the windowed DataFrame segment.
+                - bool: True if feeder has moved to a new DataFrame, False otherwise.
 
         Raises:
             StopIteration: If all DataFrames have been processed.
         """
         is_change: bool = False
 
-        # Check if current index exceeds the size of the current DataFrame
         if self._df_index > self._df_size:
-            # Attempt to move to the next DataFrame
             self._dfs_index += 1
             if self._dfs_index >= self._dfs_size:
-                # No more DataFrames to process
                 raise StopIteration
-            # Update current DataFrame and reset indices
             self._df = self._dfs[self._dfs_index]
             self._df_index = self._window
             self._df_size = len(self._df)
             is_change = True
 
-        # Ensure there are enough rows for the window
         if self._df_index - self._window < 0 or self._df_index > self._df_size:
             raise StopIteration
 
-        # Slice the DataFrame to create a windowed segment
         df_part: pd.DataFrame = self._df.iloc[self._df_index - self._window : self._df_index].reset_index(drop=True)
-        # Instantiate the part_class with the sliced DataFrame
         part: T = self._part_class(df_part, self._backword)
-        # Increment the DataFrame index for the next iteration
         self._df_index += 1
 
         return part, is_change
 
     def reset(self) -> None:
         """
-        Resets the feeder to its initial state, allowing iteration to start from the beginning.
+        Resets the feeder to its initial state, restarting iteration from the beginning.
         """
         self.__iter__()
 
     def next(self) -> Tuple[Optional[T], Optional[bool]]:
         """
-        Retrieves the next windowed segment in a safe manner, returning (None, None) 
-        if the iteration has completed.
+        Safely retrieves the next windowed segment, returning None if iteration is complete.
 
         Returns:
             Tuple[Optional[T], Optional[bool]]: 
-                - Optional[T]: An instance of the part_class containing the windowed DataFrame segment, or None if iteration is complete.
-                - Optional[bool]: True if a DataFrame change has occurred, False if not, or None if iteration is complete.
+                - Optional[T]: The next windowed segment or None if complete.
+                - Optional[bool]: True if DataFrame changed, False if not, or None if complete.
         """
         try:
             return self.__next__()
