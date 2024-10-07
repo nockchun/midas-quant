@@ -1,5 +1,6 @@
 from .IFeeder import IFeeder
 from .IFeedPart import IFeedPart
+from .PandasPart import PandasPart
 from typing import List, Tuple, Optional, Type, TypeVar, Generic, Union
 import pandas as pd
 
@@ -36,7 +37,7 @@ class PandasFeeder(IFeeder, Generic[T]):
         dfs: List[pd.DataFrame], 
         window: int = 5, 
         backword: bool = True, 
-        part_class: Type[T] = IFeedPart,
+        part_class: Type[T] = PandasPart,
         col_daytime: str = "reg_day",
         col_price: str = "price",
         infos: List[dict] = None

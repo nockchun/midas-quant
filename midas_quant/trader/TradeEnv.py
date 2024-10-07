@@ -128,10 +128,10 @@ class TradeEnv(gym.Env, ABC):
         
         self._feeder.reset()
         feed_info = self._feeder.info()
-        code, name = None, None
+        code, name = "test", "test"
         if feed_info is not None:
-            code = feed_info["code"] if "code" in feed_info else None
-            name = feed_info["name"] if "name" in feed_info else None
+            code = feed_info["code"] if "code" in feed_info else "test"
+            name = feed_info["name"] if "name" in feed_info else "test"
         self._account = self._account_class(
             code, name, balance=self._balance, fee=self._fee, tax=self._tax
         )
