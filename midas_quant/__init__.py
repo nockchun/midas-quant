@@ -4,7 +4,7 @@ from .trader import *
 import gymnasium as gym
 
 
-__version__ = '0.1.12'
+__version__ = '0.5.0'
 
 
 gym.register(
