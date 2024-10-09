@@ -151,6 +151,17 @@ files = [
 ]
 
 [[package]]
+name = "danbi"
+version = "0.3.0"
+description = "python utility library"
+optional = false
+python-versions = "<4.0,>=3.7"
+files = [
+    {file = "danbi-0.3.0-py3-none-any.whl", hash = "sha256:1fc92234b26c977ebdd71d1b1cea231b308cde328dbb2cefaee1668fa067f777"},
+    {file = "danbi-0.3.0.tar.gz", hash = "sha256:200232d2d735d51e33fd35855078ee495b273ebff4a1d3e0ed1d5069e35ae1c5"},
+]
+
+[[package]]
 name = "idna"
 version = "3.10"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -328,4 +339,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "844053c22465893a05ec05395e465bf57179bcc2a267fb0cbeda3b3cbbc23aad"
+content-hash = "b76c70a145b219a7c964c2d537282775b61fe399ae1654019214e7f7fdd78b54"

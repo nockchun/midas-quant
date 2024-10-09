@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, Optional, Dict, Any, Tuple
 from ..feed import IFeeder
+from danbi import DotDict
 
 class TradeEnv(gym.Env, ABC):
     """
@@ -146,7 +147,7 @@ class TradeEnv(gym.Env, ABC):
         )
 
         extra_info = self._extra_infos(self._obs)
-        self._obs.addColumn("average_price", extra_info["asset"]["average_price"])
+        self._obs.addColumn("average_price", extra_info.asset.average_price)
         return self._obs, extra_info
     
     def _extra_infos(self, obs: np.ndarray) -> Dict[str, Any]:
@@ -166,11 +167,11 @@ class TradeEnv(gym.Env, ABC):
             and hist_asset[0].quantity == 0
         ):
             self._cant_trade = True
-        return {
+        return DotDict({
             "feed_change": self._feed_change,
             "asset": hist_asset[0] if len(hist_asset) > 0 else None,
             "trade": hist_trade[0] if len(hist_trade) > 0 else None,
-        }
+        })
     
     def _terminated(self, obs: Optional[np.ndarray], feed_change: Optional[object]) -> bool:
         """
