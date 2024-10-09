@@ -216,6 +216,20 @@ class PandasPart(IFeedPart):
 
         return lower_bound < compare_value < upper_bound and lower_bound < target_value < upper_bound
 
+    def equalValue(self, index: int, target: str, value: float) -> bool:
+        """
+        Checks if the value in the target column is equal to the specified value at the given index.
+
+        Args:
+            index (int): The row index for comparison.
+            target (str): The target column for comparison.
+            value (float): The value to compare against.
+
+        Returns:
+            bool: True if the value in the target column equals the specified value, False otherwise.
+        """
+        return self[index][target] == value
+
     def equalCompare(self, index: int, target: str, compare: str) -> bool:
         """
         Checks if the values in the target and compare columns are equal at the specified index.
@@ -229,7 +243,7 @@ class PandasPart(IFeedPart):
             bool: True if both values are equal, False otherwise.
         """
         return self[index][target] == self[index][compare]
-
+    
     def cross(self, index: int, target: str, compare: str, updn: str = "up") -> bool:
         """
         Detects if a 'cross' event occurs between the target and compare columns at the specified index.

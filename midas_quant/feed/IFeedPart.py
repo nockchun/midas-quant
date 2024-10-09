@@ -139,6 +139,35 @@ class IFeedPart(ABC):
         """
         pass
 
+    def equalValue(self, index: int, target: str, value: float) -> bool:
+        """
+        Checks if the value in the target column is equal to the specified value at the given index.
+
+        Args:
+            index (int): The row index for comparison.
+            target (str): The target column for comparison.
+            value (float): The value to compare against.
+
+        Returns:
+            bool: True if the value in the target column equals the specified value, False otherwise.
+        """
+        pass
+
+    def equalCompare(self, index: int, target: str, compare: str) -> bool:
+        """
+        Checks if the values in the target and compare columns are equal at the specified index.
+
+        Args:
+            index (int): The row index for comparison.
+            target (str): The target column for comparison.
+            compare (str): The column to compare against.
+
+        Returns:
+            bool: True if both values are equal, False otherwise.
+        """
+        pass
+
+    
     @abstractmethod
     def cross(self, index: int, target: str, compare: str, updn: str = "up") -> bool:
         """
