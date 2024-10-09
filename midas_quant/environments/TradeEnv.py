@@ -1,10 +1,13 @@
-import gymnasium as gym
+from ..feed import IFeeder, IFeedPart
+from .plot import showGraph
 import numpy as np
-from abc import ABC, abstractmethod
+import pandas as pd
 from enum import Enum
-from typing import Callable, Optional, Dict, Any, Tuple
-from ..feed import IFeeder
 from danbi import DotDict
+import gymnasium as gym
+from abc import ABC, abstractmethod
+from typing import Callable, Optional, Dict, Any, Tuple
+
 
 class TradeEnv(gym.Env, ABC):
     """
@@ -184,7 +187,12 @@ class TradeEnv(gym.Env, ABC):
         Returns:
             bool: True if terminated, False otherwise.
         """
-        return obs is None and feed_change is None
+        terminated = obs is None and feed_change is None
+        
+        if terminated:
+            self._accounts.append(self._account)
+
+        return terminated
     
     def _truncated(self, obs: Optional[np.ndarray], feed_change: Optional[object]) -> bool:
         """
@@ -247,7 +255,7 @@ class TradeEnv(gym.Env, ABC):
         """
         return 0.0
     
-    def step(self, action: int, rate: float = 0.0) -> Tuple[np.ndarray, float, bool, bool, Optional[Dict[str, Any]]]:
+    def step(self, action: int, rate: float = 0.0) -> Tuple[IFeedPart, float, bool, bool, Optional[Dict[str, Any]]]:
         """
         Executes one step in the environment.
 
@@ -256,12 +264,12 @@ class TradeEnv(gym.Env, ABC):
             rate (float, optional): Rate influencing the action. Defaults to 0.0.
 
         Returns:
-            Tuple[np.ndarray, float, bool, bool, Optional[Dict[str, Any]]]: 
-                - Observation after step
-                - Reward
-                - Termination flag
-                - Truncation flag
-                - Additional info
+            Tuple[obs, reward, terminated, truncated, info]:
+                - obs(IFeedPart): Observation after step
+                - reward(float): Reward
+                - terminated(bool): Termination flag
+                - truncated(bool): Truncation flag
+                - info(Optional[Dict[str, Any]]): Additional info
         """
         if self._is_terminated:
             return self._obs, 0.0, self._is_terminated, self._is_truncated, None
@@ -275,7 +283,7 @@ class TradeEnv(gym.Env, ABC):
             return self._obs, 0.0, self._is_terminated, self._is_truncated, None
         
         extra_info = self._extra_infos(self._obs)
-        if extra_info["feed_change"]:
+        if extra_info.feed_change:
             self._accounts.append(self._account)
             feed_info = self._feeder.info()
             self._account = self._account_class(
@@ -291,8 +299,88 @@ class TradeEnv(gym.Env, ABC):
         
         reward = self._reward(
             action, rate, self._obs, self._feed_change, 
-            extra_info["asset"], extra_info["trade"]
+            extra_info.asset, extra_info.trade
         )
+        self._obs.addColumn("average_price", extra_info.asset.average_price)
         
-        self._obs.addColumn("average_price", extra_info["asset"]["average_price"])
         return self._obs, reward, self._is_terminated, truncated, extra_info
+
+    def stepHistorys(self, index: int) -> Tuple[str, str, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """
+        Retrieves the historical account and trade data for a specific step index.
+    
+        This method returns detailed information about a specific historical account state, 
+        including the code and name of the asset, the original stock data at that step, 
+        the asset changes, and the trade history.
+    
+        Args:
+            index (int): The index of the step to retrieve the historical data for.
+    
+        Returns:
+            Tuple[code, name, data, asset, trade]: 
+                - code(str): The asset code. 
+                - name(str): The asset name.
+                - data(pd.DataFrame): The original stock data at the specified step.
+                - asset(pd.DataFrame): The asset history DataFrame, which records changes in the asset.
+                - trade(pd.DataFrame): The trade history DataFrame, which records buy/sell transactions.
+        """
+        accounts = self.getAccounts()
+        datas = self.getFeeder().datas()
+        
+        account = accounts[index]
+        code, name = account.getCode(), account.getName()
+        asset, trade = account.getHistory()
+        data = datas[index]
+        
+        return code, name, data, asset._df, trade._df
+
+    def graphHistory(self, index: int = 0, width: int = 1200, extra_plots: list = []) -> None:
+        """
+        Retrieves and visualizes historical trading data for a specific account index.
+    
+        Args:
+            index (int, optional): 
+                The index of the account history to retrieve and visualize. Must be within the range 
+                of available account histories. Defaults to 0.
+            
+            width (int, optional): 
+                The width of the resulting graph in pixels. Defaults to 1200.
+            
+            extra_plots (list, optional): 
+                A list of additional plots to include in the visualization. Each element in the list 
+                should be a Bokeh plot object or a similar compatible object. Defaults to an empty list.
+    
+        Raises:
+            AssertionError: 
+                If the provided index is out of the valid range (i.e., not between 0 and history_size - 1).
+    
+        Returns:
+            None
+        """
+        history_size = len(self.getAccounts())
+        assert index < history_size, f"Index must be between 0 and {history_size-1}."
+        
+        code, name, data, asset, trade = self.stepHistorys(index)
+        
+        # Create buy history DataFrame
+        trade_buy = trade[trade.action == "buy"][["reg_day", "price"]]
+        trade_buy.rename(columns={'price': 'buy_price'}, inplace=True)
+        
+        # Create sell history DataFrame
+        trade_sell = trade[trade.action == "sell"][["reg_day", "price"]]
+        trade_sell.rename(columns={'price': 'sell_price'}, inplace=True)
+    
+        # Create average price DataFrame for the viewing period
+        asset_average_price = asset[asset.average_price > 0][["reg_day", "average_price"]]
+        
+        # Merge basic data with buy and sell transactions and average price
+        merged = pd.merge(data, trade_buy, on="reg_day", how="outer")
+        merged = pd.merge(merged, trade_sell, on="reg_day", how="outer")
+        merged = pd.merge(merged, asset_average_price, on="reg_day", how="outer")
+        
+        # Adjust positions for buy and sell markers
+        merged.loc[merged["buy_price"].notnull(), "buy_price"] = merged["close"] * 0.95
+        merged.loc[merged["sell_price"].notnull(), "sell_price"] = merged["close"] * 1.05
+    
+        # Display the graph using the showGraph function
+        showGraph(code, name, asset, merged, extra_plots, width)

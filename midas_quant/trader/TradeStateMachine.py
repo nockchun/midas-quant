@@ -12,6 +12,7 @@ class TradeStateMachine:
             transitions (list, optional): A list of transition dictionaries.
             initial_state (str, optional): The initial state of the state machine.
         """
+        self._initial_state = initial_state
         if transitions is not None and initial_state is not None:
             self.setTransitions(transitions, initial_state)
 
@@ -30,11 +31,12 @@ class TradeStateMachine:
 
         self._states = list(sorted(states))
         self._transitions = transitions
+        self._initial_state = initial_state
         self._machine = GraphMachine(
             model=self,
             states=self._states,
             transitions=self._transitions,
-            initial=initial_state,
+            initial=self._initial_state,
             ignore_invalid_triggers=True
         )
 
@@ -56,6 +58,14 @@ class TradeStateMachine:
         """
         return self._transitions
 
+    def initState(self) -> None:
+        """
+        Reset the state machine to its initial state.
+        
+        This method sets the current state of the machine back to the initial state defined during setup.
+        """
+        self._machine.set_state(self._initial_state)
+
     def graph(self) -> Image:
         """
         Generate a graphical representation of the state machine.
@@ -69,3 +79,5 @@ class TradeStateMachine:
         buf.seek(0)
         
         return Image(buf.read())
+
+
