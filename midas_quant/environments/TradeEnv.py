@@ -144,7 +144,10 @@ class TradeEnv(gym.Env, ABC):
             self._obs[0][self._feeder.col_daytime()],
             self._obs[0][self._feeder.col_price()]
         )
-        return self._obs, self._extra_infos(self._obs)
+
+        extra_info = self._extra_infos(self._obs)
+        self._obs.addColumn("average_price", extra_info["asset"]["average_price"])
+        return self._obs, extra_info
     
     def _extra_infos(self, obs: np.ndarray) -> Dict[str, Any]:
         """
@@ -289,5 +292,6 @@ class TradeEnv(gym.Env, ABC):
             action, rate, self._obs, self._feed_change, 
             extra_info["asset"], extra_info["trade"]
         )
-
+        
+        self._obs.addColumn("average_price", extra_info["asset"]["average_price"])
         return self._obs, reward, self._is_terminated, truncated, extra_info

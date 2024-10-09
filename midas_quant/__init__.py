@@ -1,4 +1,5 @@
 from .feed import *
+from .environments import *
 from .trader import *
 import gymnasium as gym
 

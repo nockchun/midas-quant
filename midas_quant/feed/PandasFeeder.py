@@ -128,6 +128,15 @@ class PandasFeeder(IFeeder, Generic[T]):
         """
         return self._dfs[self._dfs_index]
 
+    def dataPrevious(self) -> pd.DataFrame:
+        """
+        Retrieves the previous DataFrame.
+
+        Returns:
+            pd.DataFrame: The previous DataFrame.
+        """
+        return self._dfs[self._dfs_index - 1]
+
     def shape(self) -> Tuple[int, int]:
         """
         Returns the shape of the current DataFrame (rows, columns).

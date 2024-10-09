@@ -32,6 +32,9 @@ class PandasPart(IFeedPart):
         self._backword: bool = backword
         self.columns = df.columns.tolist()
 
+    def addColumn(self, col, value):
+        self._df[col] = value
+
     def isBackword(self) -> bool:
         """
         Indicates whether the current indexing mode is set to backward.

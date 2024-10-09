@@ -74,6 +74,16 @@ class IFeeder(ABC):
         pass
     
     @abstractmethod
+    def dataPrevious(self) -> pd.DataFrame:
+        """
+        Retrieves the previous DataFrame.
+
+        Returns:
+            pd.DataFrame: The previous DataFrame.
+        """
+        pass
+    
+    @abstractmethod
     def shape(self) -> Tuple[int, int]:
         """
         The shape of DataFrame.
