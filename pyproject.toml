@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "midas-quant"
-version = "0.5.0"
+version = "0.5.1"
 description = "A quantitative finance library for midas models."
 authors = ["nockchun <nockchun@gmail.com>"]
 readme = "README.md"
