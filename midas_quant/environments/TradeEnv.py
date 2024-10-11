@@ -334,7 +334,7 @@ class TradeEnv(gym.Env, ABC):
         
         return code, name, data, asset._df, trade._df
 
-    def graphHistory(self, index: int = 0, width: int = 1200, extra_plots: list = []) -> None:
+    def graphHistory(self, index: int = 0, width: int = 1200, extra_plots: list = [], extra_height = 130) -> None:
         """
         Retrieves and visualizes historical trading data for a specific account index.
     
@@ -381,6 +381,7 @@ class TradeEnv(gym.Env, ABC):
         # Adjust positions for buy and sell markers
         merged.loc[merged["buy_price"].notnull(), "buy_price"] = merged["close"] * 0.95
         merged.loc[merged["sell_price"].notnull(), "sell_price"] = merged["close"] * 1.05
-    
+
+        col_daytime = self._feeder.col_daytime()
         # Display the graph using the showGraph function
-        showGraph(code, name, asset, merged, extra_plots, width)
+        showGraph(code, name, asset, merged, col_daytime, extra_plots, width, extra_height=extra_height)

@@ -73,10 +73,14 @@ def plotAccount(data, width: int = 1200, height: int = 350, code="test", name="t
     return fig
 
 
-def showGraph(code, name, asset, data, plots: list = [], width: int = 1200):
+def showGraph(code, name, asset, data, col_daytime, plots: dict = {}, width: int = 1200, extra_height = 130):
+    extra_plots = []
+    for name in plots:
+        extra_plots.append(bibo.plotTimeseries(data, col_daytime, plots[name], extra_height, hlines=[0], title=name))
+    
     bibo.showAsRows([
-        plotAccount(asset, height=120, code=code, name=name),
-        plotCandle(data, height=400),
-    ] + plots, "x", width)
+        plotAccount(asset, height=130, code=code, name=name),
+        plotCandle(data, height=350),
+    ] + extra_plots, "x", width)
 
 

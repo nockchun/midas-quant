@@ -33,6 +33,7 @@ class TSMStockSpotEnv(TradeStateMachine):
     def devTest(self, state, verbose: bool = True):
         self.reset()
         method = getattr(self, f"Strategy{state}", None)
+        print(method)
         action = method(self, self._obs, self._info, verbose)
 
         if action is None:
@@ -44,21 +45,24 @@ class TSMStockSpotEnv(TradeStateMachine):
 
     def simulation(self, verbose: bool = False):
         self.reset()
-        while True:
-            method = self._find_state_method()
-            action = method(self, self._obs, self._info, verbose)
-    
-            if action is None:
-                self._obs, reward, terminate, truncate, self._info = self.step(ActionSpot.HOLD)
-            else:
-                action_success = self._invoke_action(action)
-                if action_success:
-                    self._obs, reward, terminate, truncate, self._info = self.step(ActionSpot(action.split("_")[-1]))
-                else:
+        try:
+            while True:
+                method = self._find_state_method()
+                action = method(self, self._obs, self._info, verbose)
+        
+                if action is None:
                     self._obs, reward, terminate, truncate, self._info = self.step(ActionSpot.HOLD)
-
-            if terminate:
-                break
+                else:
+                    action_success = self._invoke_action(action)
+                    if action_success:
+                        self._obs, reward, terminate, truncate, self._info = self.step(ActionSpot(action.split("_")[-1]))
+                    else:
+                        self._obs, reward, terminate, truncate, self._info = self.step(ActionSpot.HOLD)
+    
+                if terminate:
+                    break
+        except:
+            print(f"method : Strategy{self.state} is not working")
 
 
 

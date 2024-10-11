@@ -19,22 +19,20 @@ class ActionSpot(Enum):
         """
         Override the _missing_ method to handle string inputs.
         This allows instantiation using the member name as a string.
+        If the value does not correspond to any member, return HOLD.
         
         Args:
             value: The value used to instantiate the Enum.
         
         Returns:
-            The corresponding Enum member if a match is found.
-        
-        Raises:
-            ValueError: If no matching member is found.
+            The corresponding Enum member if a match is found, otherwise ActionSpot.HOLD.
         """
         if isinstance(value, str):
             try:
-                # Attempt to return the member matching the provided name
+                # Attempt to return the member matching the provided name (case-insensitive)
                 return cls[value.upper()]
             except KeyError:
-                pass  # If no matching member is found, proceed to raise ValueError
-        # If not a string or no match found, defer to the superclass implementation
+                # If no matching member is found, return HOLD
+                return cls.HOLD
+        # If not a string, defer to the superclass implementation
         return super()._missing_(value)
-
